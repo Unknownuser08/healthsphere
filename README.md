@@ -42,10 +42,6 @@ A secure, interactive, and user-friendly web application for managing, viewing, 
 - **QR Generator:** `qrcode.react` or similar package
 - **Encryption:** AES / JWT-based secure data access
 
----
 
-## 🚀 Getting Started
-
-### 1. Clone the repository
 
 
