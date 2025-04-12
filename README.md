@@ -9,6 +9,7 @@ A secure, interactive, and user-friendly web application for managing, viewing, 
 - **4-Digit Secure Login System**
   - Unique code authentication for each user
   - Locks data access after 3 failed attempts for enhanced security
+  - pin for login is 1987
 
 - **Personalized Dashboard**
   - View current medications, treatment plans, and upcoming appointments
