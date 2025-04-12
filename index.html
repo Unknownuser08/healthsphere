@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HealthSphere | Your Digital Health Vault</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+  <style>
+    :root {
+      --primary: #0d9488;
+      --primary-light: #ccfbf1;
+    }
+    .nav-item.active {
+      background-color: var(--primary-light);
+      color: var(--primary);
+      border-right: 4px solid var(--primary);
+    }
+    .health-card {
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+    .health-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+    .pin-input {
+      width: 3rem;
+      height: 3rem;
+      text-align: center;
+      font-size: 1.5rem;
+      margin: 0 0.25rem;
+    }
+    .tab-content {
+      animation: fadeIn 0.4s ease-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .file-upload {
+      border: 2px dashed #cbd5e1;
+      transition: all 0.3s ease;
+    }
+    .file-upload:hover {
+      border-color: var(--primary);
+      background-color: #f8fafc;
+    }
+  </style>
+</head>
+<body class="bg-gray-50 font-sans text-gray-800">
+  <!-- Login Screen (Initially Visible) -->
+  <div id="loginScreen" class="fixed inset-0 flex items-center justify-center bg-teal-900 z-50">
+    <div class="bg-white rounded-xl shadow-xl p-8 w-full max-w-md">
+      <div class="text-center mb-8">
+        <h1 class="text-3xl font-bold text-teal-800 flex items-center justify-center">
+          <i class="fas fa-shield-alt mr-3"></i> HealthSphere
+        </h1>
+        <p class="text-gray-600 mt-2">Secure Health Data Portal</p>
+      </div>
+      
+      <div class="space-y-6">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Enter 4-Digit PIN</label>
+          <div class="flex justify-center space-x-2">
+            <input type="password" maxlength="1" class="pin-input border rounded-lg focus:ring-2 focus:ring-teal-500" 
+                  oninput="moveToNext(this)" data-pin-index="0">
+            <input type="password" maxlength="1" class="pin-input border rounded-lg focus:ring-2 focus:ring-teal-500" 
+                  oninput="moveToNext(this)" data-pin-index="1">
+            <input type="password" maxlength="1" class="pin-input border rounded-lg focus:ring-2 focus:ring-teal-500" 
+                  oninput="moveToNext(this)" data-pin-index="2">
+            <input type="password" maxlength="1" class="pin-input border rounded-lg focus:ring-2 focus:ring-teal-500" 
+                  oninput="moveToNext(this)" data-pin-index="3">
+          </div>
+          <p id="pinError" class="text-red-500 text-sm mt-2 hidden">Incorrect PIN. Attempts left: <span id="attemptsLeft">3</span></p>
+        </div>
+        
+        <button id="loginBtn" class="w-full bg-teal-600 text-white py-3 rounded-lg hover:bg-teal-700 transition">
+          Unlock Health Vault
+        </button>
+        
+        <div class="text-center text-sm text-gray-500">
+          <a href="#" class="text-teal-600 hover:underline">Forgot PIN?</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main App (Initially Hidden) -->
+  <div id="appContainer" class="hidden">
+    <div class="flex h-screen overflow-hidden">
+      <!-- Sidebar Navigation -->
+      <div class="w-64 bg-white shadow-lg flex flex-col">
+        <div class="p-6 border-b">
+          <h1 class="text-2xl font-bold text-teal-800 flex items-center">
+            <i class="fas fa-shield-alt mr-2"></i> HealthSphere
+          </h1>
+          <div class="flex items-center mt-3">
+            <div class="w-10 h-10 rounded-full bg-teal-100 flex items-center justify-center mr-3">
+              <i class="fas fa-user text-teal-600"></i>
+            </div>
+            <div>
+              <p class="font-medium">Sarah Johnson</p>
+              <p class="text-xs text-gray-500">Patient ID: HS-789456</p>
+            </div>
+          </div>
+        </div>
+        
+        <nav class="flex-1 p-4 space-y-1 overflow-y-auto">
+          <a href="#dashboard" class="nav-item active block p-3 rounded-lg transition" data-tab="dashboard">
+            <i class="fas fa-tachometer-alt mr-3 w-5 text-center"></i> Dashboard
+          </a>
+          <a href="#permissions" class="nav-item block p-3 rounded-lg transition" data-tab="permissions">
+            <i class="fas fa-user-shield mr-3 w-5 text-center"></i> Permissions
+          </a>
+          <a href="#records" class="nav-item block p-3 rounded-lg transition" data-tab="records">
+            <i class="fas fa-file-medical mr-3 w-5 text-center"></i> My Records
+          </a>
+          <a href="#share" class="nav-item block p-3 rounded-lg transition" data-tab="share">
+            <i class="fas fa-qrcode mr-3 w-5 text-center"></i> Share Access
+          </a>
+          <a href="#health" class="nav-item block p-3 rounded-lg transition" data-tab="health">
+            <i class="fas fa-heartbeat mr-3 w-5 text-center"></i> Health Profile
+          </a>
+        </nav>
+        
+        <div class="p-4 border-t">
+          <button id="logoutBtn" class="w-full flex items-center justify-center p-3 text-gray-600 hover:bg-gray-100 rounded-lg">
+            <i class="fas fa-sign-out-alt mr-2"></i> Lock Vault
+          </button>
+        </div>
+      </div>
+
+      <!-- Main Content Area -->
+      <div class="flex-1 overflow-auto">
+        <!-- Dashboard Tab -->
+        <div id="dashboard" class="tab-content p-8">
+          <div class="max-w-7xl mx-auto">
+            <!-- Welcome Header -->
+            <div class="flex justify-between items-center mb-8">
+              <div>
+                <h2 class="text-2xl font-bold text-gray-800">Health Dashboard</h2>
+                <p class="text-gray-600">Welcome back, Sarah. Here's your health overview.</p>
+              </div>
+              <div class="flex items-center space-x-2 bg-teal-50 px-4 py-2 rounded-full">
+                <div class="w-2 h-2 bg-teal-500 rounded-full"></div>
+                <span class="text-sm text-teal-800">Last sync: Today 9:42 AM</span>
+              </div>
+            </div>
+            
+            <!-- Health Stats Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              <div class="health-card bg-white rounded-xl p-6">
+                <div class="flex justify-between items-start">
+                  <div>
+                    <h3 class="text-lg font-semibold text-gray-700">Vital Signs</h3>
+                    <p class="text-sm text-gray-500">Last checked: Today 8:30 AM</p>
+                  </div>
+                  <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                    <i class="fas fa-heart text-blue-500"></i>
+                  </div>
+                </div>
+                <div class="mt-6 grid grid-cols-2 gap-4">
+                  <div class="text-center">
+                    <p class="text-2xl font-bold text-gray-800">72</p>
+                    <p class="text-xs text-gray-500">BPM</p>
+                  </div>
+                  <div class="text-center">
+                    <p class="text-2xl font-bold text-gray-800">118/75</p>
+                    <p class="text-xs text-gray-500">mmHg</p>
+                  </div>
+                  <div class="text-center">
+                    <p class="text-2xl font-bold text-gray-800">98.6°F</p>
+                    <p class="text-xs text-gray-500">Temp</p>
+                  </div>
+                  <div class="text-center">
+                    <p class="text-2xl font-bold text-gray-800">98%</p>
+                    <p class="text-xs text-gray-500">SpO2</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="health-card bg-white rounded-xl p-6">
+                <div class="flex justify-between items-start">
+                  <div>
+                    <h3 class="text-lg font-semibold text-gray-700">Medications</h3>
+                    <p class="text-sm text-gray-500">Current prescriptions</p>
+                  </div>
+                  <div class="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                    <i class="fas fa-pills text-purple-500"></i>
+                  </div>
+                </div>
+                <div class="mt-6 space-y-3">
+                  <div class="flex items-center justify-between">
+                    <div>
+                      <p class="font-medium">Metformin</p>
+                      <p class="text-xs text-gray-500">500mg • Twice daily</p>
+                    </div>
+                    <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">Active</span>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <div>
+                      <p class="font-medium">Atorvastatin</p>
+                      <p class="text-xs text-gray-500">20mg • At bedtime</p>
+                    </div>
+                    <span class="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">Last dose</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="health-card bg-white rounded-xl p-6">
+                <div class="flex justify-between items-start">
+                  <div>
+                    <h3 class="text-lg font-semibold text-gray-700">Upcoming</h3>
+                    <p class="text-sm text-gray-500">Appointments & reminders</p>
+                  </div>
+                  <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                    <i class="fas fa-calendar-check text-green-500"></i>
+                  </div>
+                </div>
+                <div class="mt-6 space-y-3">
+                  <div class="flex items-start">
+                    <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3 mt-1">
+                      <i class="fas fa-user-md text-blue-500 text-xs"></i>
+                    </div>
+                    <div>
+                      <p class="font-medium">Dr. Sharma - Follow Up</p>
+                      <p class="text-xs text-gray-500">Tomorrow • 10:30 AM</p>
+                    </div>
+                  </div>
+                  <div class="flex items-start">
+                    <div class="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center mr-3 mt-1">
+                      <i class="fas fa-syringe text-red-500 text-xs"></i>
+                    </div>
+                    <div>
+                      <p class="font-medium">Flu Vaccine Due</p>
+                      <p class="text-xs text-gray-500">Due in 2 weeks</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Health Charts -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+              <div class="health-card bg-white rounded-xl p-6">
+                <div class="flex justify-between items-center mb-4">
+                  <h3 class="text-lg font-semibold text-gray-700">Blood Pressure Trend</h3>
+                  <select class="text-xs border rounded px-2 py-1">
+                    <option>Last 7 days</option>
+                    <option>Last 30 days</option>
+                    <option>Last 6 months</option>
+                  </select>
+                </div>
+                <canvas id="bpChart" height="200"></canvas>
+              </div>
+              
+              <div class="health-card bg-white rounded-xl p-6">
+                <div class="flex justify-between items-center mb-4">
+                  <h3 class="text-lg font-semibold text-gray-700">Blood Glucose Levels</h3>
+                  <select class="text-xs border rounded px-2 py-1">
+                    <option>Last 7 days</option>
+                    <option>Last 30 days</option>
+                    <option>Last 6 months</option>
+                  </select>
+                </div>
+                <canvas id="glucoseChart" height="200"></canvas>
+              </div>
+            </div>
+            
+            <!-- Add Health Data Section -->
+            <div class="health-card bg-white rounded-xl p-6 mb-8">
+              <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold text-gray-700">Add Health Information</h3>
+                <button class="text-teal-600 hover:text-teal-800">
+                  <i class="fas fa-history mr-1"></i> View All
+                </button>
+              </div>
+              
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <button class="add-data-btn" onclick="showAddDataModal('vitals')">
+                  <i class="fas fa-heartbeat text-red-500"></i>
+                  <span>Vital Signs</span>
+                </button>
+                <button class="add-data-btn" onclick="showAddDataModal('medication')">
+                  <i class="fas fa-pills text-purple-500"></i>
+                  <span>Medication</span>
+                </button>
+                <button class="add-data-btn" onclick="showAddDataModal('vaccine')">
+                  <i class="fas fa-syringe text-blue-500"></i>
+                  <span>Vaccination</span>
+                </button>
+                <button class="add-data-btn" onclick="showAddDataModal('symptoms')">
+                  <i class="fas fa-thermometer text-orange-500"></i>
+                  <span>Symptoms</span>
+                </button>
+              </div>
+            </div>
+            
+            <!-- Recent Activity -->
+            <div class="health-card bg-white rounded-xl p-6">
+              <h3 class="text-lg font-semibold text-gray-700 mb-4">Recent Activity</h3>
+              <div class="space-y-4">
+                <div class="activity-item">
+                  <div class="flex items-start">
+                    <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                      <i class="fas fa-eye text-blue-500 text-sm"></i>
+                    </div>
+                    <div class="flex-1">
+                      <p class="font-medium">Viewed your health record</p>
+                      <p class="text-sm text-gray-600">Blood Test Results by Dr. Sharma</p>
+                      <p class="text-xs text-gray-400">@ 9:35 AM • Today</p>
+                    </div>
+                    <button class="text-gray-400 hover:text-gray-600">
+                      <i class="fas fa-ellipsis-v"></i>
+                    </button>
+                  </div>
+                </div>
+                
+                <div class="activity-item">
+                  <div class="flex items-start">
+                    <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                      <i class="fas fa-share text-green-500 text-sm"></i>
+                    </div>
+                    <div class="flex-1">
+                      <p class="font-medium">You shared health record</p>
+                      <p class="text-sm text-gray-600">X-Ray Scan by Dr. Patel</p>
+                      <p class="text-xs text-gray-400">@ 2:15 PM • Yesterday</p>
+                    </div>
+                    <button class="text-gray-400 hover:text-gray-600">
+                      <i class="fas fa-ellipsis-v"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Permissions Tab -->
+        <div id="permissions" class="tab-content hidden p-8">
+          <div class="max-w-6xl mx-auto">
+            <div class="flex justify-between items-center mb-8">
+              <div>
+                <h2 class="text-2xl font-bold text-gray-800">Permissions Control</h2>
+                <p class="text-gray-600">Manage who can access your health records</p>
+              </div>
+              <button class="btn-primary" onclick="showGrantAccessModal()">
+                <i class="fas fa-plus mr-2"></i> Grant New Access
+              </button>
+            </div>
+
+            <!-- Permission Status Tabs -->
+            <div class="flex border-b mb-6">
+              <button class="permission-tab active" data-status="active">Active (2)</button>
+              <button class="permission-tab" data-status="expired">Expired (3)</button>
+              <button class="permission-tab" data-status="revoked">Revoked (1)</button>
+            </div>
+
+            <!-- Active Permissions -->
+            <div class="permission-section" data-status="active">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Permission Card 1 -->
+                <div class="permission-card">
+                  <div class="flex justify-between items-start">
+                    <div>
+                      <h3 class="font-bold text-lg">Dr. Sharma</h3>
+                      <p class="text-gray-600 text-sm">Cardiologist • Delhi Medical Center</p>
+                    </div>
+                    <span class="status-badge active">Active</span>
+                  </div>
+                  
+                  <div class="mt-4 space-y-2 text-sm">
+                    <div class="flex">
+                      <span class="w-24 text-gray-500">Access:</span>
+                      <span>Complete Medical History</span>
+                    </div>
+                    <div class="flex">
+                      <span class="w-24 text-gray-500">Files:</span>
+                      <span>All records except allergies</span>
+                    </div>
+                    <div class="flex">
+                      <span class="w-24 text-gray-500">Granted:</span>
+                      <span>Apr 10, 2025 - 9:30 AM</span>
+                    </div>
+                    <div class="flex">
+                      <span class="w-24 text-gray-500">Expires:</span>
+                      <span class="font-medium">Apr 17, 2025 - 9:30 AM</span>
+                    </div>
+                  </div>
+                  
+                  <div class="mt-5 flex justify-end space-x-3">
+                    <button class="btn-outline" onclick="extendPermission(1)">
+                      <i class="fas fa-clock mr-1"></i> Extend
+                    </button>
+                    <button class="btn-danger" onclick="revokePermission(1)">
+                      <i class="fas fa-ban mr-1"></i> Revoke
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Permission Card 2 -->
+                <div class="permission-card">
+                  <div class="flex justify-between items-start">
+                    <div>
+                      <h3 class="font-bold text-lg">City Vision Center</h3>
+                      <p class="text-gray-600 text-sm">Ophthalmology • New Delhi</p>
+                    </div>
+                    <span class="status-badge warning">Expiring Soon</span>
+                  </div>
+                  
+                  <div class="mt-4 space-y-2 text-sm">
+                    <div class="flex">
+                      <span class="w-24 text-gray-500">Access:</span>
+                      <span>Eye Examination Reports</span>
+                    </div>
+                    <div class="flex">
+                      <span class="w-24 text-gray-500">Files:</span>
+                      <span>3 documents</span>
+                    </div>
+                    <div class="flex">
+                      <span class="w-24 text-gray-500">Granted:</span>
+                      <span>Apr 5, 2025 - 2:15 PM</span>
+                    </div>
+                    <div class="flex">
+                      <span class="w-24 text-gray-500">Expires:</span>
+                      <span class="font-medium text-yellow-600">Today - 11:59 PM</span>
+                    </div>
+                  </div>
+                  
+                  <div class="mt-5 flex justify-end space-x-3">
+                    <button class="btn-outline" onclick="extendPermission(2)">
+                      <i class="fas fa-clock mr-1"></i> Extend
+                    </button>
+                    <button class="btn-danger" onclick="revokePermission(2)">
+                      <i class="fas fa-ban mr-1"></i> Revoke
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Expired Permissions -->
+            <div class="permission-section hidden" data-status="expired">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Sample Expired Permission -->
+                <div class="permission-card opacity-70">
+                  <div class="flex justify-between items-start">
+                    <div>
+                      <h3 class="font-bold text-lg">Dr. Patel</h3>
+                      <p class="text-gray-600 text-sm">General Physician • Apollo Hospital</p>
+                    </div>
+                    <span class="status-badge expired">Expired</span>
+                  </div>
+                  
+                  <div class="mt-4 space-y-2 text-sm">
+                    <div class="flex">
+                      <span class="w-24 text-gray-500">Access:</span>
+                      <span>Blood Test Reports</span>
+                    </div>
+                    <div class="flex">
+                      <span class="w-24 text-gray-500">Files:</span>
+                      <span>5 lab reports</span>
+                    </div>
+                    <div class="flex">
+                      <span class="w-24 text-gray-500">Granted:</span>
+                      <span>Mar 28, 2025 - 11:20 AM</span>
+                    </div>
+                    <div class="flex">
+                      <span class="w-24 text-gray-500">Expired:</span>
+                      <span class="text-gray-500">Apr 4, 2025 - 11:20 AM</span>
+                    </div>
+                  </div>
+                  
+                  <div class="mt-5 flex justify-end">
+                    <button class="btn-outline" onclick="renewPermission(3)">
+                      <i class="fas fa-redo mr-1"></i> Renew Access
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Revoked Permissions -->
+            <div class="permission-section hidden" data-status="revoked">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Sample Revoked Permission -->
+                <div class="permission-card opacity-70">
+                  <div class="flex justify-between items-start">
+                    <div>
+                      <h3 class="font-bold text-lg">PhysioCare Center</h3>
+                      <p class="text-gray-600 text-sm">Physical Therapy • Noida</p>
+                    </div>
+                    <span class="status-badge revoked">Revoked</span>
+                  </div>
+                  
+                  <div class="mt-4 space-y-2 text-sm">
+                    <div class="flex">
+                      <span class="w-24 text-gray-500">Access:</span>
+                      <span>Physical Therapy Records</span>
+                    </div>
+                    <div class="flex">
+                      <span class="w-24 text-gray-500">Files:</span>
+                      <span>12 session reports</span>
+                    </div>
+                    <div class="flex">
+                      <span class="w-24 text-gray-500">Granted:</span>
+                      <span>Feb 15, 2025 - 3:45 PM</span>
+                    </div>
+                    <div class="flex">
+                      <span class="w-24 text-gray-500">Revoked:</span>
+                      <span class="text-gray-500">Mar 10, 2025 - 10:15 AM</span>
+                    </div>
+                  </div>
+                  
+                  <div class="mt-5 flex justify-end">
+                    <button class="btn-outline" onclick="regrantPermission(4)">
+                      <i class="fas fa-share mr-1"></i> Regrant Access
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Other tabs (Records, Share, Health) would go here -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Modals -->
+  <div id="addDataModal" class="modal hidden">
+    <div class="modal-content max-w-md">
+      <div class="modal-header">
+        <h3 id="addDataModalTitle" class="text-xl font-bold"></h3>
+        <button class="modal-close" onclick="hideAddDataModal()">&times;</button>
+      </div>
+      
+      <div class="modal-body">
+        <form id="healthDataForm" class="space-y-4">
+          <!-- Dynamic form fields will be inserted here by JavaScript -->
+          <div id="dynamicFormFields"></div>
+          
+          <div class="pt-2">
+            <button type="submit" class="btn-primary w-full">
+              <i class="fas fa-save mr-2"></i> Save Health Data
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Global Data Store
+    const healthData = {
+      user: {
+        name: "Sarah Johnson",
+        id: "HS-789456",
+        pin: "1987", // Sample PIN (in real app, hash this)
+        attemptsLeft: 3
+      },
+      permissions: {
+        active: [
+          {
+            id: 1,
+            provider: "Dr. Sharma",
+            specialty: "Cardiologist",
+            institution: "Delhi Medical Center",
+            access: "Complete Medical History",
+            files: "All records except allergies",
+            granted: "Apr 10, 2025 - 9:30 AM",
+            expires: "Apr 17, 2025 - 9:30 AM",
+            status: "active"
+          },
+          {
+            id: 2,
+            provider: "City Vision Center",
+            specialty: "Ophthalmology",
+            institution: "New Delhi",
+            access: "Eye Examination Reports",
+            files: "3 documents",
+            granted: "Apr 5, 2025 - 2:15 PM",
+            expires: "Today - 11:59 PM",
+            status: "expiring"
+          }
+        ],
+        expired: [
+          {
+            id: 3,
+            provider: "Dr. Patel",
+            specialty: "General Physician",
+            institution: "Apollo Hospital",
+            access: "Blood Test Reports",
+            files: "5 lab reports",
+            granted: "Mar 28, 2025 - 11:20 AM",
+            expired: "Apr 4, 2025 - 11:20 AM",
+            status: "expired"
+          }
+        ],
+        revoked: [
+          {
+            id: 4,
+            provider: "PhysioCare Center",
+            specialty: "Physical Therapy",
+            institution: "Noida",
+            access: "Physical Therapy Records",
+            files: "12 session reports",
+            granted: "Feb 15, 2025 - 3:45 PM",
+            revoked: "Mar 10, 2025 - 10:15 AM",
+            status: "revoked"
+          }
+        ]
+      },
+      vitals: [
+        // Sample vitals data for charts
+      ]
+    };
+
+    // DOM Ready
+    document.addEventListener('DOMContentLoaded', function() {
+      // Initialize login system
+      initLogin();
+      
+      // Initialize main app (if already logged in)
+      if (localStorage.getItem('healthSphereLoggedIn') === 'true') {
+        document.getElementById('loginScreen').classList.add('hidden');
+        document.getElementById('appContainer').classList.remove('hidden');
+        initApp();
+      }
+    });
+
+    // Login System
+    function initLogin() {
+      const pinInputs = document.querySelectorAll('.pin-input');
+      const loginBtn = document.getElementById('loginBtn');
+      const pinError = document.getElementById('pinError');
+      
+      // Auto-focus first PIN input
+      pinInputs[0].focus();
+      
+      // Handle login button click
+      loginBtn.addEventListener('click', function() {
+        const enteredPin = Array.from(pinInputs).map(input => input.value).join('');
+        
+        if (enteredPin === healthData.user.pin) {
+          // Successful login
+          localStorage.setItem('healthSphereLoggedIn', 'true');
+          document.getElementById('loginScreen').classList.add('hidden');
+          document.getElementById('appContainer').classList.remove('hidden');
+          initApp();
+        } else {
+          // Failed login
+          healthData.user.attemptsLeft--;
+          pinError.classList.remove('hidden');
+          document.getElementById('attemptsLeft').textContent = healthData.user.attemptsLeft;
+          
+          // Clear PIN inputs
+          pinInputs.forEach(input => input.value = '');
+          pinInputs[0].focus();
+          
+          if (healthData.user.attemptsLeft <= 0) {
+            alert('Maximum attempts reached. Please try again later.');
+            window.location.reload();
+          }
+        }
+      });
+      
+      // Logout button
+      document.getElementById('logoutBtn').addEventListener('click', function() {
+        localStorage.removeItem('healthSphereLoggedIn');
+        window.location.reload();
+      });
+    }
+
+    // Move to next PIN input automatically
+    function moveToNext(input) {
+      const nextIndex = parseInt(input.getAttribute('data-pin-index')) + 1;
+      if (input.value.length === 1 && nextIndex < 4) {
+        document.querySelector(`.pin-input[data-pin-index="${nextIndex}"]`).focus();
+      }
+    }
+
+    // Main App Initialization
+    function initApp() {
+      // Initialize tab system
+      initTabs();
+      
+      // Initialize permission tabs
+      initPermissionTabs();
+      
+      // Initialize health charts
+      initHealthCharts();
+      
+      // Load sample data
+      loadSampleData();
+    }
+
+    // Tab Navigation System
+    function initTabs() {
+      const navItems = document.querySelectorAll('.nav-item');
+      
+      navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+          e.preventDefault();
+          
+          // Update active state in sidebar
+          navItems.forEach(nav => nav.classList.remove('active'));
+          this.classList.add('active');
+          
+          // Show corresponding tab
+          const tabId = this.getAttribute('data-tab');
+          document.querySelectorAll('.tab-content').forEach(tab => {
+            tab.classList.add('hidden');
+          });
+          document.getElementById(tabId).classList.remove('hidden');
+        });
+      });
+    }
+
+    // Permission Status Tabs
+    function initPermissionTabs() {
+      const permissionTabs = document.querySelectorAll('.permission-tab');
+      
+      permissionTabs.forEach(tab => {
+        tab.addEventListener('click', function() {
+          // Update tab UI
+          permissionTabs.forEach(t => t.classList.remove('active'));
+          this.classList.add('active');
+          
+          // Show corresponding section
+          const status = this.getAttribute('data-status');
+          document.querySelectorAll('.permission-section').forEach(section => {
+            section.classList.add('hidden');
+          });
+          document.querySelector(`.permission-section[data-status="${status}"]`).classList.remove('hidden');
+        });
+      });
+    }
+
+    // Health Charts
+    function initHealthCharts() {
+      // Blood Pressure Chart
+      const bpCtx = document.getElementById('bpChart').getContext('2d');
+      new Chart(bpCtx, {
+        type: 'line',
+        data: {
+          labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+          datasets: [
+            {
+              label: 'Systolic',
+              data: [122, 118, 120, 125, 119, 123, 121],
+              borderColor: '#3b82f6',
+              backgroundColor: 'rgba(59, 130, 246, 0.1)',
+              tension: 0.3,
+              fill: true
+            },
+            {
+              label: 'Diastolic',
+              data: [78, 75, 76, 82, 77, 79, 76],
+              borderColor: '#ef4444',
+              backgroundColor: 'rgba(239, 68, 68, 0.1)',
+              tension: 0.3,
+              fill: true
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: {
+              position: 'top',
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: false,
+              min: 70,
+              max: 140
+            }
+          }
+        }
+      });
+      
+      // Glucose Chart
+      const glucoseCtx = document.getElementById('glucoseChart').getContext('2d');
+      new Chart(glucoseCtx, {
+        type: 'line',
+        data: {
+          labels: ['6 AM', '9 AM', '12 PM', '3 PM', '6 PM', '9 PM'],
+          datasets: [
+            {
+              label: 'Glucose (mg/dL)',
+              data: [95, 102, 98, 108, 92, 96],
+              borderColor: '#10b981',
+              backgroundColor: 'rgba(16, 185, 129, 0.1)',
+              tension: 0.3,
+              fill: true
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: {
+              display: false
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: false,
+              min: 80,
+              max: 120
+            }
+          }
+        }
+      });
+    }
+
+    // Permission Actions
+    function revokePermission(id) {
+      if (confirm('Are you sure you want to revoke this access?')) {
+        const permission = healthData.permissions.active.find(p => p.id === id);
+        if (permission) {
+          permission.status = 'revoked';
+          permission.revoked = new Date().toLocaleString();
+          healthData.permissions.revoked.push(permission);
+          healthData.permissions.active = healthData.permissions.active.filter(p => p.id !== id);
+          
+          // Refresh UI
+          loadSampleData();
+          alert('Access has been revoked successfully.');
+        }
+      }
+    }
+
+    function extendPermission(id) {
+      const permission = healthData.permissions.active.find(p => p.id === id);
+      if (permission) {
+        const newExpiry = new Date();
+        newExpiry.setDate(newExpiry.getDate() + 7); // Add 7 days
+        permission.expires = formatDate(newExpiry) + ' - ' + permission.expires.split('-')[1];
+        permission.status = 'active';
+        
+        // Refresh UI
+        loadSampleData();
+        alert('Access has been extended for 7 more days.');
+      }
+    }
+
+    function renewPermission(id) {
+      const permission = healthData.permissions.expired.find(p => p.id === id);
+      if (permission) {
+        const newExpiry = new Date();
+        newExpiry.setDate(newExpiry.getDate() + 7); // Add 7 days
+        permission.expires = formatDate(newExpiry) + ' - ' + permission.granted.split('-')[1];
+        permission.status = 'active';
+        healthData.permissions.active.push(permission);
+        healthData.permissions.expired = healthData.permissions.expired.filter(p => p.id !== id);
+        
+        // Refresh UI
+        loadSampleData();
+        alert('Access has been renewed for 7 days.');
+      }
+    }
+
+    // Add Data Modal
+    function showAddDataModal(type) {
+      const modalTitle = document.getElementById('addDataModalTitle');
+      const formFields = document.getElementById('dynamicFormFields');
+      
+      // Clear previous fields
+      formFields.innerHTML = '';
+      
+      // Set title and fields based on type
+      switch(type) {
+        case 'vitals':
+          modalTitle.textContent = 'Add Vital Signs';
+          formFields.innerHTML = `
+            <div>
+              <label class="block text-sm font-medium mb-1">Blood Pressure</label>
+              <div class="grid grid-cols-2 gap-2">
+                <input type="number" class="form-input" placeholder="Systolic" required>
+                <input type="number" class="form-input" placeholder="Diastolic" required>
+              </div>
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1">Heart Rate</label>
+              <input type="number" class="form-input" placeholder="BPM" required>
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1">Temperature</label>
+              <input type="number" class="form-input" placeholder="°F" required>
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1">SpO2</label>
+              <input type="number" class="form-input" placeholder="%" required>
+            </div>
+          `;
+          break;
+          
+        case 'medication':
+          modalTitle.textContent = 'Add Medication';
+          formFields.innerHTML = `
+            <div>
+              <label class="block text-sm font-medium mb-1">Medication Name</label>
+              <input type="text" class="form-input" placeholder="e.g., Metformin" required>
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1">Dosage</label>
+              <input type="text" class="form-input" placeholder="e.g., 500mg" required>
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1">Frequency</label>
+              <input type="text" class="form-input" placeholder="e.g., Twice daily" required>
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1">Prescribed By</label>
+              <input type="text" class="form-input" placeholder="Doctor's name">
+            </div>
+          `;
+          break;
+          
+        case 'vaccine':
+          modalTitle.textContent = 'Add Vaccination Record';
+          formFields.innerHTML = `
+            <div>
+              <label class="block text-sm font-medium mb-1">Vaccine Name</label>
+              <input type="text" class="form-input" placeholder="e.g., Flu Vaccine" required>
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1">Date Received</label>
+              <input type="date" class="form-input" required>
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1">Next Dose Due</label>
+              <input type="date" class="form-input">
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1">Administered By</label>
+              <input type="text" class="form-input" placeholder="Clinic/Doctor name">
+            </div>
+          `;
+          break;
+      }
+      
+      document.getElementById('addDataModal').classList.remove('hidden');
+    }
+
+    function hideAddDataModal() {
+      document.getElementById('addDataModal').classList.add('hidden');
+    }
+
+    // Helper Functions
+    function formatDate(date) {
+      const options = { month: 'short', day: 'numeric', year: 'numeric' };
+      return date.toLocaleDateString('en-US', options);
+    }
+
+    function loadSampleData() {
+      // In a complete app, this would load from an API
+      console.log('Loading sample data...');
+    }
+  </script>
+</body>
+</html>
